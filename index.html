@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>-w-</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f0f0f0;
+  margin:0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+#chatContainer {
+  width:400px;
+  height:600px;
+  background:#ffffff;
+  border-radius:15px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  box-shadow:0 5px 20px rgba(0,0,0,0.2);
+}
+#messages {
+  flex:1;
+  padding:15px;
+  overflow-y:auto;
+  background:#f9f9f9;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.message {
+  max-width:70%;
+  padding:10px 14px;
+  border-radius:18px;
+  word-wrap:break-word;
+}
+.user {
+  background:#cde7ff;
+  align-self:flex-end;
+  text-align:right;
+}
+.bot {
+  background:#e0ffe0;
+  align-self:flex-start;
+  display:flex;
+  align-items:flex-start;
+}
+.bot img {
+  width:32px;
+  height:32px;
+  border-radius:100%;
+  margin-right:10px;
+}
+#inputArea {
+  border-top:1px solid #ccc;
+  padding:8px;
+}
+#inputArea input {
+  width:94%;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid #ccc;
+  font-size:14px;
+}
+</style>
+</head>
+<body>
+
+<div id="chatContainer">
+  <div id="messages"></div>
+  <div id="inputArea">
+    <input id="userInput" type="text" placeholder="메시지를 입력하세요...">
+  </div>
+</div>
+
+<script>
+const api_url = "http://localhost:1243/v1/chat/completions"; // LM Studio API
+const model = "qwen2-7b-instruct";
+
+function appendMessage(text, sender) {
+  const msg = document.createElement("div");
+  if(sender==="bot") {
+    msg.className = "message bot";
+    const img = document.createElement("img");
+    img.src = "00.jpg";
+    img.alt = "임시";
+    msg.appendChild(img);
+    const span = document.createElement("span");
+    span.textContent = text;
+    msg.appendChild(span);
+  } else {
+    msg.className = "message user";
+    msg.textContent = text;
+  }
+  document.getElementById("messages").appendChild(msg);
+  document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
+}
+
+async function sendMessage() {
+  const input = document.getElementById("userInput");
+  if(!input.value) return;
+  appendMessage(input.value,"user");
+  const userText = input.value;
+  input.value = "";
+
+  try{
+    const res = await fetch(api_url,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:model,
+        messages:[{role:"user",content:[{type:"text",text:userText}]}],
+        max_tokens:256
+      })
+    });
+    const data = await res.json();
+    const reply = data?.choices?.[0]?.message?.content ?? "응답 없음";
+    appendMessage(reply,"bot");
+  } catch(e){
+    appendMessage("오류 발생: "+e.message,"bot");
+  }
+}
+
+document.getElementById("userInput").addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&!e.shiftKey){
+    e.preventDefault();
+    sendMessage();
+  }
+});
+</script>
+
+</body>
+</html>
